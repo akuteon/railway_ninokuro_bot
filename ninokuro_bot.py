@@ -28,8 +28,7 @@ intents = discord.Intents.default()
 intents.message_content = True  # メッセージ本文へのアクセスを許可
 intents.reactions = True        # リアクション（スタンプ）へのアクセスを許可
 # Botのプレフィックスとインテントを指定してインスタンスを作成
-bot = CustomBot(command_prefix="!", intents=intents)
-
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 本番環境判定
 ENV = os.getenv("ENVIRONMENT", "local")
