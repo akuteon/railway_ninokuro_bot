@@ -5,14 +5,10 @@ from urllib.parse import urljoin
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from dateutil import parser
-from flask import Flask, redirect
 from pytz import timezone
-import threading
 import discord
 import os
 import asyncio
-import signal
-import time
 
 
 # .env環境ファイル読み込み
@@ -21,15 +17,6 @@ TOKEN = os.environ["TOKEN"]
 
 # タイムゾーン
 jst = timezone('Asia/Tokyo')
-
-class CustomBot(commands.Bot):
-    async def async_cleanup(self):
-        print("🧹 Bot終了前のクリーンアップ処理を実行中...")
-        # ここにDB切断やログ出力などを記述
-
-    async def close(self):
-        await self.async_cleanup()
-        await super().close()
 
 # Supabase接続処理
 url = os.getenv("SUPABASE_URL")
@@ -43,8 +30,10 @@ intents.reactions = True        # リアクション（スタンプ）へのア�
 # Botのプレフィックスとインテントを指定してインスタンスを作成
 bot = CustomBot(command_prefix="!", intents=intents)
 
-# 別のWebアプリのトップURL
-if os.getenv("RENDER") == "true":
+
+# 本番環境判定
+ENV = os.getenv("ENVIRONMENT", "local")
+if ENV == "production":
     WEB_APP_URL = "https://ninokuro-party.onrender.com/"
 else:
     WEB_APP_URL = "http://127.0.0.1:5000"
@@ -317,90 +306,5 @@ def initialize_attendance_check_data(server_id):
     return True
 
 
-# Flaskで外部から定期的にPINGを飛ばすことによりRenderがスリープにならないようにする
-app = Flask(__name__)
-print("[FLASK] Flask app initialized")
-
-bot_started = False
-bot_lock = threading.Lock()
-
-@app.route('/')
-def index():
-    status = "起動済み" if bot_started else "未起動"
-    print(f"[DEBUG] bot_started initial = {bot_started}")
-    return f"""
-    <html>
-        <body>
-            <h1>Bot 状態: {status}</h1>
-            <form action="/start-bot" method="post">
-                <button type="submit">Botを起動する</button>
-            </form>
-        </body>
-    </html>
-    """
-
-@app.route('/start-bot', methods=['POST'])
-def start_bot_route():
-    print("[DEBUG] /start-bot route called")
-    global bot_started
-    if not bot_started:
-        with bot_lock:
-            if not bot_started:
-                print("[BOT] Triggered by /start-bot")
-                threading.Thread(target=run_bot_forever, daemon=True).start()
-                bot_started = True
-    return redirect('/')
-
-@app.route('/health')
-def health_check():
-    return "alive"
-
-# Renderでの終了時にBOTのスレッドを終了する。
-shutdown_event = threading.Event()
-
-def handle_sigterm(signum, frame):
-    print("🛑 SIGTERM received, setting shutdown flag")
-    shutdown_event.set()
-
-signal.signal(signal.SIGTERM, handle_sigterm)
-
-async def start_bot():
-    await bot.start(TOKEN)
-
-def run_bot_forever():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    async def bot_runner():
-        try:
-            print("[BOT] Starting bot.run()")
-            await bot.start(TOKEN)
-        except Exception as e:
-            print(f"[BOT ERROR] {e}")
-        finally:
-            print("[BOT] Closing bot...")
-            await bot.close()
-
-    task = loop.create_task(bot_runner())
-
-    def shutdown_watcher():
-        shutdown_event.wait()
-        print("[BOT] Shutdown event detected, cancelling bot task...")
-        task.cancel()
-
-    threading.Thread(target=shutdown_watcher, daemon=True).start()
-
-    try:
-        loop.run_until_complete(task)
-    except asyncio.CancelledError:
-        print("[BOT] Bot task cancelled")
-    finally:
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
-
-
-print(f"[ENV] RENDER = {os.getenv('RENDER')}")
-
-if os.getenv("RENDER") != "true":
-    bot.run(TOKEN)
-    print(f"[BOT START] 起動しました: {datetime.now(jst)}")
+# Discord Bot をメインスレッドで起動
+bot.run(TOKEN)
