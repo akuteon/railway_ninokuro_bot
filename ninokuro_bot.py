@@ -33,7 +33,6 @@ intents.reactions = True        # リアクション（スタンプ）へのア�
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Botの最後のイベントからの経過時間を確認するための変数
-global last_activity
 last_activity = datetime.datetime.now()
 
 # 本番環境判定
