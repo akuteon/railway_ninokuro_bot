@@ -324,6 +324,9 @@ def initialize_attendance_check_data(server_id):
 
 app = FastAPI()
 
+def is_bot_running():
+    return bot.is_ready() and not bot.is_closed()
+
 @app.get("/")
 async def root():
     # Bot が死んでいたら起動する
@@ -332,9 +335,6 @@ async def root():
         asyncio.create_task(start_bot())
 
     return {"status": "bot is running"}
-
-def is_bot_running():
-    return bot.is_ready() and not bot.is_closed()
 
 bot_starting = False
 
