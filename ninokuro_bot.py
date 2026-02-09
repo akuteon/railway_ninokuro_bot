@@ -341,7 +341,6 @@ def is_bot_running():
     return bot.is_ready() and not bot.is_closed()
 
 bot_starting = False
-server = None
 
 async def start_bot():
     global bot_starting
@@ -355,7 +354,6 @@ async def start_bot():
         bot_starting = False
 
 async def start_web():
-    global server
     port = int(os.getenv("PORT", 8000))
     config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
     server = uvicorn.Server(config)
@@ -381,11 +379,6 @@ async def inactivity_checker():
         if diff.total_seconds() > 1 * 60:
             print("No activity for 30 minutes. Shutting down bot...")
             await bot.close()
-
-            # ★ FastAPI（uvicorn）も終了させる
-            if server is not None:
-                server.should_exit = True
-
             break
 
         await asyncio.sleep(60)  # 1分ごとにチェック
