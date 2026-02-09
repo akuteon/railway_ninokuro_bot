@@ -55,6 +55,7 @@ reaction_labels = {
 async def on_ready():
     global last_activity
     last_activity = datetime.datetime.now()
+    bot.loop.create_task(inactivity_checker())
     print(f"Logged in as {bot.user}")  # コンソールにBotのログイン情報を表示
 
 # 出席確認メッセージを送信し、Bot自身がスタンプを押すコマンド
