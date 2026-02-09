@@ -33,7 +33,7 @@ intents.reactions = True        # リアクション（スタンプ）へのア�
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Botの最後のイベントからの経過時間を確認するための変数
-last_activity = datetime.datetime.now()
+last_activity = datetime.now()
 
 # 本番環境判定
 ENV = os.getenv("ENVIRONMENT", "local")
@@ -57,7 +57,7 @@ reaction_labels = {
 @bot.event
 async def on_ready():
     global last_activity
-    last_activity = datetime.datetime.now()
+    last_activity = datetime.now()
     bot.loop.create_task(inactivity_checker())
     print(f"Logged in as {bot.user}")  # コンソールにBotのログイン情報を表示
 
@@ -65,7 +65,7 @@ async def on_ready():
 @bot.command()
 async def start_week(ctx):
     global last_activity
-    last_activity = datetime.datetime.now()
+    last_activity = datetime.now()
     today = datetime.now(jst)
     print(today)
     today_weekday = today.weekday()  # 0=月曜, 6=日曜
@@ -135,7 +135,7 @@ async def start_week(ctx):
 @bot.command()
 async def initialize_week(ctx):
     global last_activity
-    last_activity = datetime.datetime.now()
+    last_activity = datetime.now()
     server_id = str(ctx.guild.id)
     success = initialize_attendance_check_data(server_id)
 
@@ -148,7 +148,7 @@ async def initialize_week(ctx):
 @bot.command()
 async def collect_week(ctx):
     global last_activity
-    last_activity = datetime.datetime.now()
+    last_activity = datetime.now()
     print(f"[COMMAND] collect_week triggered by {ctx.author} at {datetime.now(jst)}")
 
     server_id = str(ctx.guild.id)
@@ -350,7 +350,7 @@ async def inactivity_checker():
     global last_activity
 
     while not bot.is_closed():
-        now = datetime.datetime.now()
+        now = datetime.now()
         diff = now - last_activity
 
         # ここで「◯分」を設定（例：30分）
