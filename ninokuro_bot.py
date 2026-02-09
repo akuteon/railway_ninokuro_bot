@@ -6,9 +6,11 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from dateutil import parser
 from pytz import timezone
+from fastapi import FastAPI
 import discord
 import os
 import asyncio
+import uvicorn
 
 
 # .env環境ファイル読み込み
@@ -306,4 +308,29 @@ def initialize_attendance_check_data(server_id):
 
 
 # Discord Bot をメインスレッドで起動
-bot.run(TOKEN)
+# bot.run(TOKEN)
+
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"status": "bot is running"}
+
+async def start_bot():
+    await bot.start(TOKEN)
+
+async def start_web():
+    port = int(os.getenv("PORT", 8000))
+    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
+
+async def main():
+    # Bot と Web サーバーを並列で動かす
+    await asyncio.gather(
+        start_bot(),
+        start_web()
+    )
+
+if __name__ == "__main__":
+    asyncio.run(main())
