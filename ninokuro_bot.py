@@ -328,10 +328,34 @@ app = FastAPI()
 def root():
     return {"status": "bot is running"}
 
+@app.get("/")
+async def root():
+    # Bot が死んでいたら起動する
+    if not is_bot_running():
+        print("Bot is not running. Starting bot...")
+        asyncio.create_task(start_bot())
+
+    return {"status": "bot is running"}
+
+def is_bot_running():
+    return bot.is_ready() and not bot.is_closed()
+
+bot_starting = False
+server = None
+
 async def start_bot():
-    await bot.start(TOKEN)
+    global bot_starting
+    if bot_starting:
+        return  # 二重起動防止
+
+    bot_starting = True
+    try:
+        await bot.start(TOKEN)
+    finally:
+        bot_starting = False
 
 async def start_web():
+    global server
     port = int(os.getenv("PORT", 8000))
     config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
     server = uvicorn.Server(config)
@@ -357,6 +381,11 @@ async def inactivity_checker():
         if diff.total_seconds() > 1 * 60:
             print("No activity for 30 minutes. Shutting down bot...")
             await bot.close()
+
+            # ★ FastAPI（uvicorn）も終了させる
+            if server is not None:
+                server.should_exit = True
+
             break
 
         await asyncio.sleep(60)  # 1分ごとにチェック
