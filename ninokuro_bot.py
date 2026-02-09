@@ -325,10 +325,6 @@ def initialize_attendance_check_data(server_id):
 app = FastAPI()
 
 @app.get("/")
-def root():
-    return {"status": "bot is running"}
-
-@app.get("/")
 async def root():
     # Bot が死んでいたら起動する
     if not is_bot_running():
