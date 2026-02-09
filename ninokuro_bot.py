@@ -53,11 +53,15 @@ reaction_labels = {
 # Botが起動したときに呼ばれるイベントハンドラ
 @bot.event
 async def on_ready():
+    global last_activity
+    last_activity = datetime.datetime.now()
     print(f"Logged in as {bot.user}")  # コンソールにBotのログイン情報を表示
 
 # 出席確認メッセージを送信し、Bot自身がスタンプを押すコマンド
 @bot.command()
 async def start_week(ctx):
+    global last_activity
+    last_activity = datetime.datetime.now()
     today = datetime.now(jst)
     print(today)
     today_weekday = today.weekday()  # 0=月曜, 6=日曜
@@ -126,6 +130,8 @@ async def start_week(ctx):
 # 重複実行時でも強制実行するためのコマンド
 @bot.command()
 async def initialize_week(ctx):
+    global last_activity
+    last_activity = datetime.datetime.now()
     server_id = str(ctx.guild.id)
     success = initialize_attendance_check_data(server_id)
 
@@ -137,6 +143,8 @@ async def initialize_week(ctx):
 # 出席情報を収集するコマンド
 @bot.command()
 async def collect_week(ctx):
+    global last_activity
+    last_activity = datetime.datetime.now()
     print(f"[COMMAND] collect_week triggered by {ctx.author} at {datetime.now(jst)}")
 
     server_id = str(ctx.guild.id)
@@ -331,6 +339,23 @@ async def main():
         start_bot(),
         start_web()
     )
+
+#  一定時間活動がなければ bot.close()する監視タスク
+async def inactivity_checker():
+    await bot.wait_until_ready()
+    global last_activity
+
+    while not bot.is_closed():
+        now = datetime.datetime.now()
+        diff = now - last_activity
+
+        # ここで「◯分」を設定（例：30分）
+        if diff.total_seconds() > 1 * 60:
+            print("No activity for 30 minutes. Shutting down bot...")
+            await bot.close()
+            break
+
+        await asyncio.sleep(60)  # 1分ごとにチェック
 
 if __name__ == "__main__":
     asyncio.run(main())
