@@ -6,11 +6,9 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from dateutil import parser
 from pytz import timezone
-from fastapi import FastAPI
 import discord
 import os
 import asyncio
-import uvicorn
 
 
 # .env環境ファイル読み込み
@@ -31,9 +29,6 @@ intents.message_content = True  # メッセージ本文へのアクセスを許�
 intents.reactions = True        # リアクション（スタンプ）へのアクセスを許可
 # Botのプレフィックスとインテントを指定してインスタンスを作成
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-# Botの最後のイベントからの経過時間を確認するための変数
-last_activity = datetime.now()
 
 # 本番環境判定
 ENV = os.getenv("ENVIRONMENT", "local")
@@ -56,16 +51,11 @@ reaction_labels = {
 # Botが起動したときに呼ばれるイベントハンドラ
 @bot.event
 async def on_ready():
-    global last_activity
-    last_activity = datetime.now()
-    bot.loop.create_task(inactivity_checker())
     print(f"Logged in as {bot.user}")  # コンソールにBotのログイン情報を表示
 
 # 出席確認メッセージを送信し、Bot自身がスタンプを押すコマンド
 @bot.command()
 async def start_week(ctx):
-    global last_activity
-    last_activity = datetime.now()
     today = datetime.now(jst)
     print(today)
     today_weekday = today.weekday()  # 0=月曜, 6=日曜
@@ -134,8 +124,6 @@ async def start_week(ctx):
 # 重複実行時でも強制実行するためのコマンド
 @bot.command()
 async def initialize_week(ctx):
-    global last_activity
-    last_activity = datetime.now()
     server_id = str(ctx.guild.id)
     success = initialize_attendance_check_data(server_id)
 
@@ -147,8 +135,6 @@ async def initialize_week(ctx):
 # 出席情報を収集するコマンド
 @bot.command()
 async def collect_week(ctx):
-    global last_activity
-    last_activity = datetime.now()
     print(f"[COMMAND] collect_week triggered by {ctx.author} at {datetime.now(jst)}")
 
     server_id = str(ctx.guild.id)
@@ -320,64 +306,4 @@ def initialize_attendance_check_data(server_id):
 
 
 # Discord Bot をメインスレッドで起動
-# bot.run(TOKEN)
-
-app = FastAPI()
-
-def is_bot_running():
-    return bot.is_ready() and not bot.is_closed()
-
-@app.get("/")
-async def root():
-    # Bot が死んでいたら起動する
-    if not is_bot_running():
-        print("Bot is not running. Starting bot...")
-        asyncio.create_task(start_bot())
-
-    return {"status": "bot is running"}
-
-bot_starting = False
-
-async def start_bot():
-    global bot_starting
-    if bot_starting:
-        return  # 二重起動防止
-
-    bot_starting = True
-    try:
-        await bot.start(TOKEN)
-    finally:
-        bot_starting = False
-
-async def start_web():
-    port = int(os.getenv("PORT", 8000))
-    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
-    server = uvicorn.Server(config)
-    await server.serve()
-
-async def main():
-    # Bot と Web サーバーを並列で動かす
-    await asyncio.gather(
-        start_bot(),
-        start_web()
-    )
-
-#  一定時間活動がなければ bot.close()する監視タスク
-async def inactivity_checker():
-    await bot.wait_until_ready()
-    global last_activity
-
-    while not bot.is_closed():
-        now = datetime.now()
-        diff = now - last_activity
-
-        # ここで「◯分」を設定（例：30分）
-        if diff.total_seconds() > 1 * 60:
-            print("No activity for 30 minutes. Shutting down bot...")
-            await bot.close()
-            break
-
-        await asyncio.sleep(60)  # 1分ごとにチェック
-
-if __name__ == "__main__":
-    asyncio.run(main())
+bot.run(TOKEN)

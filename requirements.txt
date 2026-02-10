@@ -4,5 +4,3 @@ python-dotenv
 supabase
 pytz
 python-dateutil
-fastapi
-uvicorn
